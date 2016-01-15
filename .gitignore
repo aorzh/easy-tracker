@@ -61,4 +61,7 @@ target/
 # Hide virtualenv
 venv/
 
+# Hide IDE
+.idea/
+
 # Created by .ignore support plugin (hsz.mobi)
