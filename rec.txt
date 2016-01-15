@@ -1,0 +1,8 @@
+altgraph==0.12
+args==0.1.0
+macholib==1.7
+modulegraph==0.12.1
+py2app==0.9
+six==1.10.0
+SQLAlchemy==1.0.11
+SQLAlchemy-Utils==0.31.4
