@@ -2,14 +2,14 @@ from os.path import expanduser, exists
 from os import makedirs
 import argparse
 import time
-from sqlalchemy import create_engine, and_, or_
+from sqlalchemy import create_engine, and_
 from models import Task, Base
 from datetime import timedelta, datetime
 from sqlalchemy.orm import sessionmaker
 
 home_dir = expanduser('~')
 tracker_dir = home_dir + '/easy_tracker'
-tracker_db = home_dir + '/easy_tracker/lite.db'
+tracker_db = home_dir + '/easy_tracker/test-lite.db'
 
 
 def main():
@@ -148,13 +148,14 @@ def report(category, task, days):
             n = session.query(Task).all()
 
         total = timedelta(seconds=0)
-        template = "{0:2}|{1:15}|{2:65}|{3:15}|"
-        print(template.format('Id', 'Category', 'Name', 'Spent hours'))
+        template = "{0:2}|{1:15}|{2:65}|{3:15}|{4:20}|"
+        print(template.format('Id', 'Category', 'Name', 'Spent hours', 'Date'))
         for i in n:
             diff = (i.stop - i.start)
             td = timedelta(seconds=diff)
             total = total + td
-            print(template.format(i.id, i.category, i.name, str(td)))
+            d = datetime.fromtimestamp(i.start)
+            print(template.format(i.id, i.category, i.name, str(td), str(d)))
         print('*****************')
         print('Total: %s (hh:mm:ss)' % total)
 
