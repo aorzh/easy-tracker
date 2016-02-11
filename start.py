@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 home_dir = expanduser('~')
 tracker_dir = home_dir + '/easy_tracker'
-tracker_db = home_dir + '/easy_tracker/test-lite.db'
+tracker_db = home_dir + '/easy_tracker/lite.db'
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
             task = namespace.task
         if namespace.days:
             days = namespace.days
-        report(category, task, days)
+        report(**{'category': category, 'days': days, 'task': task})
 
 
 def init_tracker():
@@ -92,59 +92,27 @@ def stop():
         session.close()
 
 
-def report(category, task, days):
+def report(**kwargs):
+
     if validate_init() is True:
         engine = create_engine("sqlite:///" + tracker_db, echo=False)
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        if category != '' and task != '' and days != 0:
+        n = session.query(Task)
+        for key in kwargs:
             current_time = datetime.utcnow()
-            days_ago = current_time - timedelta(days=int(days))
-            n = session.query(Task).filter(and_(Task.category == category, Task.name == task,
-                                                Task.start >= int(datetime.timestamp(days_ago)))).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category != '' and task != '' and days == 0:
-            n = session.query(Task).filter(and_(Task.category == category, Task.name == task)).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category != '' and task == '' and days != 0:
-            current_time = datetime.utcnow()
-            days_ago = current_time - timedelta(days=int(days))
-            n = session.query(Task).filter(
-                and_(Task.category == category, Task.start >= int(datetime.timestamp(days_ago)))).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category == '' and task != '' and days != 0:
-            current_time = datetime.utcnow()
-            days_ago = current_time - timedelta(days=int(days))
-            n = session.query(Task).filter(
-                and_(Task.name == task, Task.start >= int(datetime.timestamp(days_ago)))).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category != '' and task == '' and days == 0:
-            n = session.query(Task).filter(Task.category == category).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category == '' and task != '' and days == 0:
-            n = session.query(Task).filter(Task.name == task).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        elif category == '' and task == '' and days != 0:
-            current_time = datetime.utcnow()
-            days_ago = current_time - timedelta(days=int(days))
-            n = session.query(Task).filter(Task.start >= int(datetime.timestamp(days_ago))).all()
-            if not n:
-                print('Can not find anything with this parameters. Return all.')
-                n = session.query(Task).all()
-        else:
+            if key == 'days' and kwargs[key] != '':
+                days_ago = current_time - timedelta(days=int(kwargs[key]))
+                n = n.filter(and_(Task.start >= int(datetime.timestamp(days_ago))))
+            if key == 'category' and kwargs[key] != '':
+                n = n.filter(and_(Task.category == kwargs[key]))
+            if key == 'task' and kwargs[key] != '':
+                n = n.filter(and_(Task.name == kwargs[key]))
+            n.all()
+
+        if not n:
+            print('Can not find anything with this parameters. Return all.')
             n = session.query(Task).all()
 
         total = timedelta(seconds=0)
