@@ -11,7 +11,7 @@ import re
 
 home_dir = expanduser('~')
 tracker_dir = home_dir + '/easy_tracker'
-tracker_db = home_dir + '/easy_tracker/test_lite.db'
+tracker_db = home_dir + '/easy_tracker/lite.db'
 
 
 def main():
@@ -23,10 +23,10 @@ def main():
     parser.add_argument('--days', '-d', help='How many days (optional for reports)')
     parser.add_argument('--date_from', '-f', help='Start date. Format should be: dd-mm-yyyy')
     parser.add_argument('--time_spent', '-s', help='Time spent. Format: XhYm')
+    parser.add_argument('--task_id', '-i', help='Id of task which need remove')
 
     """
-    Need add remove (by id, category, task description)
-    Need add backup function
+    Need add remove (by id)
     Add statistic (pandas etc.)
     """
     namespace = parser.parse_args()
@@ -60,6 +60,12 @@ def main():
         if namespace.days:
             days = namespace.days
         report(**{'category': category, 'days': days, 'task': task})
+
+    if namespace.init == 'remove':
+        if namespace.task_id is None:
+            print('Do you know task ID which need remove? Try get report for additional information')
+        else:
+            remove_log(namespace.task_id)
 
 
 def init_tracker():
@@ -106,6 +112,17 @@ def stop():
         n = session.query(Task).order_by(Task.id.desc()).first()
         session.query(Task).filter(Task.id == n.id).update({'stop': now})
         print(n.name + " stopped!")
+        session.commit()
+        session.close()
+
+
+def remove_log(task_id):
+    if validate_init() is True:
+        engine = create_engine("sqlite:///" + tracker_db, echo=False)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        n = session.query(Task)
+        n.filter(Task.id == task_id).delete()
         session.commit()
         session.close()
 
