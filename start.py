@@ -6,18 +6,29 @@ from sqlalchemy import create_engine, and_
 from models import Task, Base
 from datetime import timedelta, datetime
 from sqlalchemy.orm import sessionmaker
+import re
+
 
 home_dir = expanduser('~')
 tracker_dir = home_dir + '/easy_tracker'
-tracker_db = home_dir + '/easy_tracker/lite.db'
+tracker_db = home_dir + '/easy_tracker/test_lite.db'
 
 
 def main():
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report")
+    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report, add-time")
     parser.add_argument('--category', '-c', help='Category like JIRA or Work or Private etc.')
     parser.add_argument('--task', '-t', help='Task short description')
     parser.add_argument('--days', '-d', help='How many days (optional for reports)')
+    parser.add_argument('--date_from', '-f', help='Start date. Format should be: dd-mm-yyyy')
+    parser.add_argument('--time_spent', '-s', help='Time spent. Format: XhYm')
+
+    """
+    Need add remove (by id, category, task description)
+    Need add backup function
+    Add statistic (pandas etc.)
+    """
     namespace = parser.parse_args()
 
     if namespace.init == 'start':
@@ -30,6 +41,13 @@ def main():
 
     if namespace.init == 'stop':
         stop()
+
+    if namespace.init == 'add-time':
+        if namespace.task is None or namespace.category is None or namespace.date_from is None \
+                or namespace.time_spent is None:
+            print('Missed some required arguments. Use --help for details')
+        else:
+            add_time(namespace.date_from, namespace.time_spent, namespace.category, namespace.task)
 
     if namespace.init == 'report':
         category = ''
@@ -126,6 +144,44 @@ def report(**kwargs):
             print(template.format(i.id, i.category, i.name, str(td), str(d)))
         print('*****************')
         print('Total: %s (hh:mm:ss)' % total)
+
+
+def add_time(date_from, time_spent, category, issue):
+    if validate_init() is True:
+        engine = create_engine("sqlite:///" + tracker_db, echo=False)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        now = int(time.time())
+        try:
+            dt = int(time.mktime(datetime.strptime(date_from, "%d-%m-%Y").timetuple()))
+            if dt >= now:
+                print('Date should be in past.')
+                return False
+        except ValueError:
+            print('Wrong date format. Use --help for additional information')
+            return False
+
+        try:
+            result = re.search('(.*)h', time_spent)
+            hours = result.group(1)
+        except AttributeError:
+            hours = 0
+
+        try:
+            result = re.search('h(.*)m', time_spent)
+            minutes = result.group(1)
+        except AttributeError:
+            minutes = 0
+
+        delta_minutes = int(hours) * 60 + int(minutes)
+
+        stop_date = dt + delta_minutes * 60
+
+        task = Task(category, issue, dt, stop_date)
+        session.add(task)
+        session.commit()
+        session.close()
+        print('You added time for task: %s ' % issue)
 
 
 def validate_init():
