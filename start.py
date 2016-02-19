@@ -7,7 +7,7 @@ from models import Task, Base
 from datetime import timedelta, datetime
 from sqlalchemy.orm import sessionmaker
 import re
-
+import smartchart
 
 home_dir = expanduser('~')
 tracker_dir = home_dir + '/easy_tracker'
@@ -17,7 +17,7 @@ tracker_db = home_dir + '/easy_tracker/lite.db'
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report, add-time")
+    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report, add-time, charts")
     parser.add_argument('--category', '-c', help='Category like JIRA or Work or Private etc.')
     parser.add_argument('--task', '-t', help='Task short description')
     parser.add_argument('--days', '-d', help='How many days (optional for reports)')
@@ -66,6 +66,9 @@ def main():
             print('Do you know task ID which need remove? Try get report for additional information')
         else:
             remove_log(namespace.task_id)
+
+    if namespace.init == 'graf':
+        smartchart.graf()
 
 
 def init_tracker():
