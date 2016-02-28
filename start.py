@@ -17,7 +17,7 @@ tracker_db = home_dir + '/easy_tracker/lite.db'
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report, add-time, charts")
+    parser.add_argument('init', nargs='?', help="Can be init, start, stop, report, add-time, remove")
     parser.add_argument('--category', '-c', help='Category like JIRA or Work or Private etc.')
     parser.add_argument('--task', '-t', help='Task short description')
     parser.add_argument('--days', '-d', help='How many days (optional for reports)')
