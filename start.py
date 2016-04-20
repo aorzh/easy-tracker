@@ -2,7 +2,7 @@ from os.path import expanduser, exists
 from os import makedirs
 import argparse
 import time
-from sqlalchemy import create_engine, and_
+from sqlalchemy import create_engine, and_, MetaData, Table, func
 from models import Task, Base
 from datetime import timedelta, datetime
 from sqlalchemy.orm import sessionmaker
@@ -133,15 +133,19 @@ def remove_log(task_id):
 def report(**kwargs):
 
     if validate_init() is True:
-        engine = create_engine("sqlite:///" + tracker_db, echo=False)
+        engine = create_engine("sqlite:///" + tracker_db, echo=True)
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        n = session.query(Task)
+        n = session.query(Task.name, Task.category, Task.start, Task.stop, Task.time, func.sum(Task.time)).group_by(
+            Task.name)
         for key in kwargs:
             current_time = datetime.utcnow()
             if key == 'days' and kwargs[key] != '':
-                days_ago = current_time - timedelta(days=int(kwargs[key]))
+                if kwargs[key] == 'today':
+                    days_ago = current_time - timedelta(0)
+                else:
+                    days_ago = current_time - timedelta(days=int(kwargs[key]))
                 n = n.filter(and_(Task.start >= int(datetime.timestamp(days_ago))))
             if key == 'category' and kwargs[key] != '':
                 n = n.filter(and_(Task.category == kwargs[key]))
@@ -151,19 +155,29 @@ def report(**kwargs):
 
         if not n:
             print('Can not find anything with this parameters. Return all.')
-            n = session.query(Task).all()
+            n = session.query(Task.name, Task.category, Task.start, Task.stop, Task.time, func.sum(Task.time)).group_by(Task.time).all()
 
-        total = timedelta(seconds=0)
-        template = "{0:2}|{1:15}|{2:65}|{3:15}|{4:20}|"
-        print(template.format('Id', 'Category', 'Name', 'Spent hours', 'Date'))
+        total = 0
+        template = "{0:3}|{1:15}|{2:65}|{3:15}|{4:20}|"
+        print(template.format('N', 'Category', 'Name', 'Spent hours', 'Date'))
+        a = 1
         for i in n:
-            diff = (i.stop - i.start)
-            td = timedelta(seconds=diff)
-            total = total + td
+            i_time = i.time
+            total = total + i.time
+
+            m, s = divmod(i_time, 60)
+            h, m = divmod(m, 60)
+
             d = datetime.fromtimestamp(i.start)
-            print(template.format(i.id, i.category, i.name, str(td), str(d)))
+            print(template.format(a, i.category, i.name, "%d:%02d:%02d" % (h, m, s), str(d)))
+            a += 1
+
         print('*****************')
-        print('Total: %s (hh:mm:ss)' % total)
+
+        m, s = divmod(total, 60)
+        h, m = divmod(m, 60)
+
+        print('Total: %d:%02d:%02d' % (h, m, s))
 
 
 def add_time(date_from, time_spent, category, issue):
@@ -210,6 +224,17 @@ def validate_init():
         return False
     else:
         return True
+
+"""
+def upgrade(session):
+    all_items = session.query(Task).all()
+    for i in all_items:
+        diff = (i.stop - i.start)
+        td = timedelta(seconds=diff)
+        i.time = int(str(td.seconds))
+        session.commit()
+"""
+
 
 if __name__ == '__main__':
     main()
